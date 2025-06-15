@@ -11,6 +11,7 @@
             utils_folder_type_label: 'Select Deliverable/Folder Type for this Phase',
             utils_proj_name_code_error: 'Please enter a valid Project Name and Project Code.',
             utils_folder_type_error: 'Please select a Deliverable/Folder Type.',
+            search_placeholder: 'Search',
             lifecycle_title: 'The Product Development Lifecycle',
             lifecycle_phase: 'Phase',
             lifecycle_subtitle: 'An interactive guide to the Limi Lighting EPDP. Click any phase or decision gate to explore details. This process is mandatory for all new product development and significant updates.',
@@ -78,6 +79,7 @@
             utils_folder_type_label: '选择此阶段的交付成果/文件夹类型',
             utils_proj_name_code_error: '请输入有效的项目名称和项目代码。',
             utils_folder_type_error: '请选择一个交付成果/文件夹类型。',
+            search_placeholder: '搜索',
             lifecycle_title: '产品开发生命周期',
             lifecycle_phase: '阶段',
             lifecycle_subtitle: 'Limi Lighting EPDP 交互指南。点击任何阶段或决策门以了解详情。此流程对所有新产品开发和重大更新具有强制性。',
@@ -509,6 +511,7 @@
         const generateFolderBtn = document.getElementById('generate-folder-btn');
         const folderOutput = document.getElementById('folder-output');
         const folderTypeSelector = document.getElementById('folder-type-selector');
+        const searchInput = document.getElementById('search-input');
 
         function renderAll() {
             renderPhaseCards(); 
@@ -537,6 +540,15 @@
         
         function renderPhaseCards() {
             const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
+            const phaseIcons = {
+                'phase-1': '💡',
+                'phase-2': '📐',
+                'phase-3': '🛠️',
+                'phase-4': '🤝',
+                'phase-5': '🏭',
+                'phase-6': '🚀',
+                'phase-7': '📈'
+            };
             let html = '';
             phaseOrder.forEach((phaseId, index) => {
                 if (fullPhaseData[phaseId] && fullPhaseData[phaseId][currentLanguage]) {
@@ -544,8 +556,8 @@
                     const phaseDisplayTag = translations[currentLanguage][`${phaseId}_tag`] || '';
                     const phaseTitleText = `${translations[currentLanguage].lifecycle_phase || 'Phase'} ${index + 1}: ${phaseDisplayName}`;
                     html += `
-                        <div id="${phaseId}" class="phase-card cursor-pointer p-4 rounded-lg shadow-md min-w-[180px] md:min-w-[200px] text-center flex-shrink-0" title="Click to view details for ${phaseTitleText}.">
-                            <div class="text-teal-600 font-bold">${translations[currentLanguage].lifecycle_phase || 'Phase'} ${index + 1}</div>
+                        <div id="${phaseId}" class="phase-card cursor-pointer p-4 rounded-lg shadow-md min-w-[180px] md:min-w-[200px] text-center flex-shrink-0" title="${phaseDisplayTag}">
+                            <div class="text-teal-600 font-bold">${phaseIcons[phaseId] || ''} ${translations[currentLanguage].lifecycle_phase || 'Phase'} ${index + 1}</div>
                             <div class="font-semibold text-gray-800 text-sm" data-lang="${phaseId}_name">${phaseDisplayName}</div>
                             <div class="text-xs text-gray-500 mt-1" data-lang="${phaseId}_tag">${phaseDisplayTag}</div>
                         </div>
@@ -553,7 +565,10 @@
                     const gateData = fullPhaseData[phaseId][currentLanguage].gate;
                     if (index < phaseOrder.length - 1 && gateData) {
                          const gateNameText = gateData.name || `Decision Gate ${index + 1}`;
-                         html += `<div class="flex items-center justify-center text-gray-500 mx-1 md:mx-2"><div class="w-6 h-px bg-gray-300"></div><div class="gate bg-slate-200 flex items-center justify-center text-xs font-bold" title="${gateNameText}"><span class="gate-text">DG${index + 1}</span></div><div class="w-6 h-px bg-gray-300"></div></div>`;
+                         const gatePurpose = gateData.purpose || '';
+                         const checklistRef = gateData.checklist_ref || '';
+                         const gateClasses = index === 1 ? 'gate pm-gate' : 'gate';
+                         html += `<div class="flex items-center justify-center text-gray-500 mx-1 md:mx-2"><div class="w-6 h-px bg-gray-300"></div><div class="${gateClasses} bg-slate-200 flex items-center justify-center text-xs font-bold" data-checklist-ref="${checklistRef}" data-gate-name="${gateNameText}" data-gate-purpose="${gatePurpose}" title="${gateNameText}"><span class="gate-text">DG${index + 1}</span></div><div class="w-6 h-px bg-gray-300"></div></div>`;
                     } else if (index < phaseOrder.length - 1) {
                          html += `<div class="flex items-center justify-center text-gray-500 mx-1 md:mx-2"><div class="w-full h-px bg-gray-300 max-w-[24px]"></div></div>`;
                     }
@@ -561,6 +576,7 @@
             });
             processFlowContainer.innerHTML = html;
             addPhaseCardListeners();
+            addGateListeners();
             setActivePhase(currentPhase);
         }
 
@@ -833,7 +849,18 @@
                 card.addEventListener('click', () => {
                     const phaseId = card.id;
                     setActivePhase(phaseId);
-                    renderPhaseDetails(phaseId); 
+                    renderPhaseDetails(phaseId);
+                });
+            });
+        }
+
+        function addGateListeners() {
+             document.querySelectorAll('.gate[data-checklist-ref]').forEach(gate => {
+                gate.addEventListener('click', () => {
+                    const ref = gate.dataset.checklistRef;
+                    const name = gate.dataset.gateName;
+                    const purpose = gate.dataset.gatePurpose;
+                    showModal(ref, name, purpose);
                 });
             });
         }
@@ -858,33 +885,28 @@
         }
 
         function renderEffortChart() {
-            const ctx = document.getElementById('effortChart')?.getContext('2d');
-            if(!ctx) return;
-            
-            if (effortChartInstance) {
-                effortChartInstance.destroy();
-            }
+            const canvas = document.getElementById('effortChart');
+            if(!canvas) return;
+
+            const ctx = canvas.getContext('2d');
             const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
-            const phaseLabels = phaseOrder.map(pid => translations[currentLanguage][`${pid}_name`] || pid);
-            const effortData = [10, 25, 25, 15, 15, 5, 5]; 
-            
-            effortChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: phaseLabels,
-                    datasets: [{
-                        label: translations[currentLanguage].tab_chart || 'Relative Effort',
-                        data: effortData,
-                        backgroundColor: 'rgba(13, 148, 136, 0.6)',
-                        borderColor: 'rgb(15, 118, 110)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'top' }, tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.x !== null) { label += context.parsed.x + '%'; } return label; } } } },
-                    scales: { x: { beginAtZero: true, title: { display: true, text: (translations[currentLanguage].tab_chart || 'Relative Effort') + ' (%)' } } }
-                }
+            const labels = phaseOrder.map(pid => translations[currentLanguage][`${pid}_name`] || pid);
+            const data = [10, 25, 25, 15, 15, 5, 5];
+
+            const width = canvas.width = canvas.parentElement.clientWidth;
+            const height = canvas.height = 300;
+            const max = Math.max(...data);
+            ctx.clearRect(0,0,width,height);
+            ctx.font = '14px sans-serif';
+            labels.forEach((label, i) => {
+                const barHeight = height / data.length * 0.6;
+                const y = (i + 0.2) * (height / data.length);
+                const barWidth = (data[i] / max) * (width - 120);
+                ctx.fillStyle = '#0d9488';
+                ctx.fillRect(100, y, barWidth, barHeight);
+                ctx.fillStyle = '#000';
+                ctx.fillText(label, 10, y + barHeight*0.75);
+                ctx.fillText(data[i] + '%', 110 + barWidth, y + barHeight*0.75);
             });
         }
         
@@ -1009,8 +1031,29 @@
                 folderTypeSelector.innerHTML = `<option value="">${translations[currentLanguage].no_deliverables_for_path || 'No specific deliverables for path'}</option>`;
                  document.getElementById('generate-folder-btn').disabled = true;
             } else {
-                 document.getElementById('generate-folder-btn').disabled = false;
+                document.getElementById('generate-folder-btn').disabled = false;
             }
+        }
+
+        function handleSearch() {
+            const query = searchInput.value.trim().toLowerCase();
+            const searchTargets = document.querySelectorAll('#detail-view *:not(script), #tab-content *:not(script)');
+            searchTargets.forEach(el => {
+                if (el.children.length) return;
+                const text = el.textContent.toLowerCase();
+                if (query && text.includes(query)) {
+                    el.classList.remove('hidden');
+                    if (!el.dataset.orig) el.dataset.orig = el.innerHTML;
+                    el.innerHTML = el.dataset.orig.replace(new RegExp(query, 'ig'), m => `<mark class="bg-yellow-200">${m}</mark>`);
+                } else {
+                    if (el.dataset.orig) el.innerHTML = el.dataset.orig;
+                    if (query) {
+                        el.classList.add('hidden');
+                    } else {
+                        el.classList.remove('hidden');
+                    }
+                }
+            });
         }
 
         langToggle.addEventListener('change', handleLanguageChange);
@@ -1018,9 +1061,11 @@
         modalBackdrop.addEventListener('click', hideModal);
         modalCloseButton.addEventListener('click', hideModal);
         generateFolderBtn.addEventListener('click', generateFolderPath);
+        if(searchInput) searchInput.addEventListener('input', handleSearch);
 
         currentRole = roleSelector.value; 
         populateRoleSelector();
         setActivePhase(initialPhase); 
-        renderAll(); 
+        renderAll();
+        handleSearch();
     });
