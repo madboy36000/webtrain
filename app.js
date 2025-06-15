@@ -21,6 +21,7 @@
             view_checklist: 'View DG Checklist',
             modal_close_btn: 'Close',
             go_back_btn: 'Go Back',
+            next_phase_btn: 'Next Phase',
             role_select_label: 'Select Your Role to Highlight Responsibilities',
             role_default: 'Default Process View',
             role_pm: 'Product Manager (Umer)',
@@ -89,6 +90,7 @@
             view_checklist: '查看决策门清单',
             modal_close_btn: '关闭',
             go_back_btn: '返回',
+            next_phase_btn: '下一阶段',
             role_select_label: '选择您的角色以突出显示职责',
             role_default: '默认流程视图',
             role_pm: '产品经理 (Umer)',
@@ -136,6 +138,8 @@
             no_deliverables_for_path: "此阶段无特定交付成果可供路径生成。"
         }
     };
+
+    const phaseOrder = ['phase-1','phase-2','phase-3','phase-4','phase-5','phase-6','phase-7'];
 
 
     const raciData = [
@@ -251,7 +255,6 @@
         }
 
         function renderPhaseCards() {
-            const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
             const phaseIcons = {
                 'phase-1': '💡',
                 'phase-2': '📐',
@@ -347,10 +350,17 @@
             if (phaseContent.gate) {
                 const phaseIndex = parseInt(phaseId.split('-')[1]);
                 let backButtonHtml = '';
+                let nextButtonHtml = '';
                 if (phaseIndex > 1) {
                     const prevPhaseId = `phase-${phaseIndex - 1}`;
-                    if (fullPhaseData[prevPhaseId]) { 
+                    if (fullPhaseData[prevPhaseId]) {
                         backButtonHtml = `<button data-target-phase="${prevPhaseId}" class="go-back-btn text-sm bg-slate-500 text-white py-1 px-3 rounded-md hover:bg-slate-600 transition-colors ml-4" data-lang="go_back_btn">${translations[currentLanguage].go_back_btn}</button>`;
+                    }
+                }
+                if (phaseIndex < phaseOrder.length) {
+                    const nextPhaseId = `phase-${phaseIndex + 1}`;
+                    if (fullPhaseData[nextPhaseId]) {
+                        nextButtonHtml = `<button data-target-phase="${nextPhaseId}" class="next-phase-btn text-sm bg-teal-500 text-white py-1 px-3 rounded-md hover:bg-teal-600 transition-colors ml-4" data-lang="next_phase_btn">${translations[currentLanguage].next_phase_btn}</button>`;
                     }
                 }
                 const gateNameText = phaseContent.gate.name || `${translations[currentLanguage].view_checklist} for DG${phaseIndex}`;
@@ -361,6 +371,7 @@
                         <p class="text-sm text-gray-600 mt-1 mb-3">${gatePurposeText}</p>
                         <button data-checklist-ref="${phaseContent.gate.checklist_ref}" class="view-checklist-btn text-sm bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition-colors" data-lang="view_checklist">${translations[currentLanguage].view_checklist}</button>
                         ${backButtonHtml}
+                        ${nextButtonHtml}
                     </div>`;
             }
             
@@ -383,6 +394,13 @@
                button.addEventListener('click', (e) => showModal(e.target.dataset.checklistRef, phaseContent.gate.name, phaseContent.gate.purpose));
            });
            detailView.querySelectorAll('.go-back-btn').forEach(button => {
+               button.addEventListener('click', (e) => {
+                   const targetPhase = e.target.dataset.targetPhase;
+                   setActivePhase(targetPhase);
+                   renderAll();
+               });
+           });
+           detailView.querySelectorAll('.next-phase-btn').forEach(button => {
                button.addEventListener('click', (e) => {
                    const targetPhase = e.target.dataset.targetPhase;
                    setActivePhase(targetPhase);
@@ -622,7 +640,6 @@
             if(!canvas) return;
 
             const ctx = canvas.getContext('2d');
-            const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
             const labels = phaseOrder.map(pid => {
                 const key = phaseKey(pid);
                 return translations[currentLanguage][`${key}_name`] || pid;
@@ -828,10 +845,11 @@
         generateFolderBtn.addEventListener('click', generateFolderPath);
         if(searchInput) searchInput.addEventListener('input', handleSearch);
 
-        currentRole = roleSelector.value; 
-        populateRoleSelector();
-        setActivePhase(initialPhase); 
+       currentRole = roleSelector.value;
+       populateRoleSelector();
+       setActivePhase(initialPhase);
        renderAll();
        handleSearch();
-        updateProgressBar();
-    });
+       window.addEventListener('resize', () => { if(currentTab === 'chart') renderEffortChart(); });
+       updateProgressBar();
+   });
