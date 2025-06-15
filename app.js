@@ -246,6 +246,10 @@
              if (currentTab === 'chart') renderEffortChart(); 
         }
         
+        function phaseKey(id) {
+            return id.replace('-', '_');
+        }
+
         function renderPhaseCards() {
             const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
             const phaseIcons = {
@@ -260,14 +264,15 @@
             let html = '';
             phaseOrder.forEach((phaseId, index) => {
                 if (fullPhaseData[phaseId] && fullPhaseData[phaseId][currentLanguage]) {
-                    const phaseDisplayName = translations[currentLanguage][`${phaseId}_name`] || phaseId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    const phaseDisplayTag = translations[currentLanguage][`${phaseId}_tag`] || '';
+                    const key = phaseKey(phaseId);
+                    const phaseDisplayName = translations[currentLanguage][`${key}_name`] || phaseId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const phaseDisplayTag = translations[currentLanguage][`${key}_tag`] || '';
                     const phaseTitleText = `${translations[currentLanguage].lifecycle_phase || 'Phase'} ${index + 1}: ${phaseDisplayName}`;
                     html += `
                         <div id="${phaseId}" class="phase-card cursor-pointer p-4 rounded-lg shadow-md min-w-[180px] md:min-w-[200px] text-center flex-shrink-0" title="${phaseDisplayTag}">
                             <div class="text-teal-600 font-bold">${phaseIcons[phaseId] || ''} ${translations[currentLanguage].lifecycle_phase || 'Phase'} ${index + 1}</div>
-                            <div class="font-semibold text-gray-800 text-sm" data-lang="${phaseId}_name">${phaseDisplayName}</div>
-                            <div class="text-xs text-gray-500 mt-1" data-lang="${phaseId}_tag">${phaseDisplayTag}</div>
+                            <div class="font-semibold text-gray-800 text-sm" data-lang="${key}_name">${phaseDisplayName}</div>
+                            <div class="text-xs text-gray-500 mt-1" data-lang="${key}_tag">${phaseDisplayTag}</div>
                         </div>
                     `;
                     const gateData = fullPhaseData[phaseId][currentLanguage].gate;
@@ -618,7 +623,10 @@
 
             const ctx = canvas.getContext('2d');
             const phaseOrder = ['phase-1', 'phase-2', 'phase-3', 'phase-4', 'phase-5', 'phase-6', 'phase-7'];
-            const labels = phaseOrder.map(pid => translations[currentLanguage][`${pid}_name`] || pid);
+            const labels = phaseOrder.map(pid => {
+                const key = phaseKey(pid);
+                return translations[currentLanguage][`${key}_name`] || pid;
+            });
             const data = [10, 25, 25, 15, 15, 5, 5];
 
             const width = canvas.width = canvas.parentElement.clientWidth;
@@ -700,7 +708,8 @@
             const phaseDataForPath = fullPhaseData[currentPhase]?.[currentLanguage];
             let phasePathSegment = "Unknown_Phase";
             if(phaseDataForPath) {
-                const titlePart = (translations[currentLanguage][`${currentPhase}_name`] || currentPhase).split(':')[0].trim(); 
+                const key = phaseKey(currentPhase);
+                const titlePart = (translations[currentLanguage][`${key}_name`] || currentPhase).split(':')[0].trim();
                 phasePathSegment = titlePart.replace(/[^\w\s-]/gi, '').replace(/\s+/g, '_');
             } else {
                  phasePathSegment = currentPhase.replace('phase-','Phase_'); 
